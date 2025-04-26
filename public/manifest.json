@@ -2,7 +2,7 @@
   "name": "RSSリーダー",
   "short_name": "RSSリーダー",
   "description": "シンプルなRSSリーダーアプリ",
-  "start_url": "/",
+  "start_url": "/android-rss-app/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4285f4",

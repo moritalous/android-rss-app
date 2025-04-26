@@ -1,13 +1,12 @@
-// キャッシュの名前とバージョン
-const CACHE_NAME = 'rss-reader-cache-v1';
+// サービスワーカーのバージョン
+const CACHE_VERSION = 'v1';
+const CACHE_NAME = `rss-reader-cache-${CACHE_VERSION}`;
 
 // キャッシュするファイルのリスト
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/assets/index.css',
-  '/assets/index.js'
+  '/android-rss-app/',
+  '/android-rss-app/index.html',
+  '/android-rss-app/manifest.json'
 ];
 
 // インストール時にキャッシュを作成
@@ -18,30 +17,33 @@ self.addEventListener('install', event => {
         console.log('キャッシュを開きました');
         return cache.addAll(urlsToCache);
       })
+      .then(() => self.skipWaiting())
   );
 });
 
-// キャッシュの更新
+// 古いキャッシュを削除
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
+          if (cacheName !== CACHE_NAME) {
+            console.log('古いキャッシュを削除:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
-// フェッチリクエストの処理
+// フェッチイベントをハンドル
 self.addEventListener('fetch', event => {
-  // APIリクエストはキャッシュしない
-  if (event.request.url.includes('api.rss2json.com')) {
-    return fetch(event.request);
+  // RSSフィードのリクエストはキャッシュしない
+  if (event.request.url.includes('cors-anywhere') || 
+      event.request.url.includes('allorigins') ||
+      event.request.url.includes('corsproxy.io')) {
+    return;
   }
 
   event.respondWith(
@@ -70,6 +72,12 @@ self.addEventListener('fetch', event => {
             return response;
           }
         );
+      })
+      .catch(() => {
+        // オフライン時のフォールバック
+        if (event.request.mode === 'navigate') {
+          return caches.match('/android-rss-app/index.html');
+        }
       })
   );
 });

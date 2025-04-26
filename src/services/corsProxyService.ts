@@ -3,12 +3,12 @@ import axios from 'axios';
 // CORSプロキシのオプション
 const PROXY_OPTIONS = {
   // プロキシを使用するかどうか
-  useProxy: false,
+  useProxy: true, // GitHub Pagesではデフォルトでプロキシを有効に
   // 複数のCORSプロキシを用意しておく（一つが使えなくなった場合の代替として）
   PROXIES: [
-    'https://cors-anywhere.herokuapp.com/',
+    'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
-    'https://corsproxy.io/?'
+    'https://cors-anywhere.herokuapp.com/'
   ],
   // 現在使用中のプロキシのインデックス
   currentProxyIndex: 0
@@ -20,6 +20,12 @@ const PROXY_OPTIONS = {
  */
 export const toggleCorsProxy = (useProxy: boolean): void => {
   PROXY_OPTIONS.useProxy = useProxy;
+  // ローカルストレージに設定を保存
+  try {
+    localStorage.setItem('cors_proxy_enabled', useProxy ? 'true' : 'false');
+  } catch (e) {
+    console.error('ローカルストレージへの保存に失敗:', e);
+  }
   console.log(`CORSプロキシ: ${useProxy ? 'オン' : 'オフ'}`);
 };
 
@@ -28,6 +34,15 @@ export const toggleCorsProxy = (useProxy: boolean): void => {
  * @returns プロキシを使用しているかどうか
  */
 export const isCorsProxyEnabled = (): boolean => {
+  // ローカルストレージから設定を読み込み
+  try {
+    const savedSetting = localStorage.getItem('cors_proxy_enabled');
+    if (savedSetting !== null) {
+      return savedSetting === 'true';
+    }
+  } catch (e) {
+    console.error('ローカルストレージからの読み込みに失敗:', e);
+  }
   return PROXY_OPTIONS.useProxy;
 };
 
@@ -38,7 +53,7 @@ export const isCorsProxyEnabled = (): boolean => {
  */
 export const fetchWithCorsProxy = async (url: string): Promise<string> => {
   // プロキシを使用しない場合は直接取得を試みる
-  if (!PROXY_OPTIONS.useProxy) {
+  if (!isCorsProxyEnabled()) {
     try {
       const response = await axios.get(url, {
         headers: {
